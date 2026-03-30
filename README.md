@@ -44,11 +44,15 @@ retinaface-pytorch/
 - 把同一教学主题的代码收敛到少量直观文件中。
 - 初学者进入 retinaface 目录后，可以直接按 模型 -> 数据 -> 损失 -> 训练 -> 推理 -> 评估 的顺序阅读。
 
-## Top News
-**`2022-03`**:**进行了大幅度的更新，支持step、cos学习率下降法、支持adam、sgd优化器选择、支持学习率根据batch_size自适应调整。**  
-BiliBili视频中的原仓库地址为：https://github.com/bubbliiiing/retinaface-pytorch/tree/bilibili
+## 仓库更新
+这个仓库基于原始项目 `bubbliiiing/retinaface-pytorch` 继续重构，并在保留原 MIT License 的前提下加入了当前版本的代码整理与功能扩展。
 
-**`2020-09`**:**仓库创建，支持模型训练，大量的注释，多个主干的选择，多个可调整参数。**   
+当前重构方向主要包括：
+- 将数据读取流程切换为基于 Hugging Face datasets 的 parquet 数据管线。
+- 将训练、评估、导出和命令行入口整理为更适合当前工程使用的结构。
+- 在保持 RetinaFace 主体思路的基础上，对训练、评估和调试流程做持续演进。
+
+原始仓库地址： https://github.com/bubbliiiing/retinaface-pytorch
 
 ## 性能情况
 | 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | Easy | Medium | Hard |
@@ -86,8 +90,13 @@ BiliBili视频中的原仓库地址为：https://github.com/bubbliiiing/retinafa
 训练所需的Retinaface_resnet50.pth等文件可以在百度云下载。    
 链接: https://pan.baidu.com/s/1Jt9Bo2UVP03bmEMuUpk_9Q 提取码: qknw     
 
-数据集可以在如下连接里下载。      
-链接: https://pan.baidu.com/s/1bsgay9iMihPlAKE49aWNTA 提取码: bhee    
+数据集已经切换为 Hugging Face 远程下载，不再需要从百度云单独下载。      
+数据集仓库: https://huggingface.co/datasets/zhouxzh/retinaface_widerface    
+
+说明：
+- 训练和评估都会优先通过 `--repo_id` 指定的 Hugging Face 数据集自动下载所需 parquet 文件。
+- 默认仓库名为 `zhouxzh/retinaface_widerface`，默认下载根目录为 `data/`。
+- 如果本地已经缓存过该数据集，后续运行会直接复用缓存，不需要重复手动准备 val 数据集。
 
 ## 预测步骤
 ### a、使用预训练权重
@@ -130,9 +139,9 @@ _defaults = {
 
 ## 训练步骤
 1. 本文使用 widerface 数据集进行训练。
-2. 可通过上述百度网盘下载 widerface 数据集。
-3. 覆盖根目录下的 data 文件夹。
-4. 先准备已经转换好的 Hugging Face parquet 数据集，目录结构需要包含 train/ 和 val/（或 validation/）split。
+2. 当前默认数据入口已经切换为 Hugging Face 数据集 `zhouxzh/retinaface_widerface`。
+3. 不需要再从百度云手动下载 widerface 数据集，也不需要手动覆盖根目录下的 `data` 文件夹。
+4. 运行训练命令时，程序会自动下载并缓存所需 parquet 数据，目录中需要包含 train/ 和 val/（或 validation/）split。
 5. 使用统一的 main.py 入口进行训练：
 
 **从预训练权重开始训练（推荐）：**
@@ -145,7 +154,7 @@ conda run -n retinaface python main.py train --backbone mobilenet --batch_size 3
 conda run -n retinaface python main.py train --backbone mobilenet --batch_size 32 --epochs 100 --restart
 ```
 
-**指定 parquet 数据集目录训练：**
+**显式指定 Hugging Face 数据集仓库训练：**
 ```bash
 conda run -n retinaface python main.py train --repo_id zhouxzh/retinaface_widerface --download_root data --backbone mobilenet --batch_size 32 --pretrained
 ```
@@ -188,7 +197,7 @@ bash run.sh
 10. 根目录下的 run.sh 会按顺序训练 README 里推荐且适合直接起手的 backbone，默认使用 pretrained、batch_size 32、lr 4e-3、num_workers 8。  
 
 ## 评估步骤
-1. 下载好百度网盘上上传的数据集，其中包括了验证集，解压在根目录下。
+1. 评估阶段会直接从 Hugging Face 数据集仓库拉取 val/validation split，不再依赖百度云验证集压缩包。
 2. 使用统一的 main.py 入口进行评估：
 ```bash
 conda run -n retinaface python main.py evaluate --backbone mobilenet --weights weights/Retinaface_mobilenet0.25.pth
@@ -387,6 +396,8 @@ conda run -n retinaface python main.py evaluate
 - 如果准备写论文或做系统性对比，建议固定训练尺寸和推理尺寸各做一组对照，不要只换 backbone。
 
 ### Reference
+本仓库基于以下项目继续重构与整理，并保留原项目的许可归属：
+
 https://github.com/bubbliiiing/retinaface-pytorch
 https://github.com/biubug6/Pytorch_Retinaface
 
@@ -394,7 +405,7 @@ https://github.com/biubug6/Pytorch_Retinaface
 
 ### 1、下载与环境问题
 **问：代码和权值文件在哪里下载？**
-答：Github代码库地址已在对应页面提供。模型权值文件和Widerface数据集的网盘链接在README的“文件下载”部分。
+答：Github代码库地址已在对应页面提供。模型权值文件仍可参考 README 的“文件下载”部分；Widerface parquet 数据集已经改为通过 Hugging Face 仓库 `zhouxzh/retinaface_widerface` 直接下载。
 
 **问：为什么提示 `No module named 'torch'` 或 `cv2`？**
 答：确保在执行代码前已经激活了配置好各种依赖库的虚拟环境（如 `conda activate retinaface`）。部分额外提示可能是由于对应的包没有安装，请查阅 `requirements.txt`。
