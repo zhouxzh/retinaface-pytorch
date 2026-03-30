@@ -9,6 +9,16 @@ widerface_evaluate/
 lfw/
 logs/
 model_data/
+data.bak/
+
+# ignore checkpoints
+checkpoints/
+weights/
+weights_origin/
+
+# igore output
+outputs/
+outputs_origin/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,0 +1,80 @@
+from itertools import product
+from math import ceil
+
+import numpy as np
+import torch
+from torchvision.ops import nms
+
+
+class Anchors:
+    def __init__(self, cfg, image_size=None):
+        self.min_sizes = cfg['min_sizes']
+        self.steps = cfg['steps']
+        self.clip = cfg['clip']
+        self.image_size = image_size
+        self.feature_maps = [[ceil(self.image_size[0] / step), ceil(self.image_size[1] / step)] for step in self.steps]
+
+    def get_anchors(self):
+        anchors = []
+        for index, feature_map in enumerate(self.feature_maps):
+            min_sizes = self.min_sizes[index]
+            for i, j in product(range(feature_map[0]), range(feature_map[1])):
+                for min_size in min_sizes:
+                    s_kx = min_size / self.image_size[1]
+                    s_ky = min_size / self.image_size[0]
+                    dense_cx = [x * self.steps[index] / self.image_size[1] for x in [j + 0.5]]
+                    dense_cy = [y * self.steps[index] / self.image_size[0] for y in [i + 0.5]]
+                    for cy, cx in product(dense_cy, dense_cx):
+                        anchors += [cx, cy, s_kx, s_ky]
+
+        output = torch.Tensor(anchors).view(-1, 4)
+        if self.clip:
+            output.clamp_(max=1, min=0)
+        return output
+
+
+def retinaface_correct_boxes(result, input_shape, image_shape):
+    new_shape = image_shape * np.min(input_shape / image_shape)
+    offset = (input_shape - new_shape) / 2.0 / input_shape
+    scale = input_shape / new_shape
+    scale_for_boxes = [scale[1], scale[0], scale[1], scale[0]]
+    scale_for_landmarks = [scale[1], scale[0], scale[1], scale[0], scale[1], scale[0], scale[1], scale[0], scale[1], scale[0]]
+    offset_for_boxes = [offset[1], offset[0], offset[1], offset[0]]
+    offset_for_landmarks = [offset[1], offset[0], offset[1], offset[0], offset[1], offset[0], offset[1], offset[0], offset[1], offset[0]]
+
+    result[:, :4] = (result[:, :4] - np.array(offset_for_boxes)) * np.array(scale_for_boxes)
+    result[:, 5:] = (result[:, 5:] - np.array(offset_for_landmarks)) * np.array(scale_for_landmarks)
+    return result
+
+
+def decode(loc, priors, variances):
+    boxes = torch.cat(
+        (priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:], priors[:, 2:] * torch.exp(loc[:, 2:] * variances[1])),
+        1,
+    )
+    boxes[:, :2] -= boxes[:, 2:] / 2
+    boxes[:, 2:] += boxes[:, :2]
+    return boxes
+
+
+def decode_landm(pre, priors, variances):
+    return torch.cat(
+        (
+            priors[:, :2] + pre[:, :2] * variances[0] * priors[:, 2:],
+            priors[:, :2] + pre[:, 2:4] * variances[0] * priors[:, 2:],
+            priors[:, :2] + pre[:, 4:6] * variances[0] * priors[:, 2:],
+            priors[:, :2] + pre[:, 6:8] * variances[0] * priors[:, 2:],
+            priors[:, :2] + pre[:, 8:10] * variances[0] * priors[:, 2:],
+        ),
+        dim=1,
+    )
+
+
+def non_max_suppression(detection, conf_thres=0.5, nms_thres=0.3):
+    mask = detection[:, 4] >= conf_thres
+    detection = detection[mask]
+    if len(detection) <= 0:
+        return []
+
+    keep = nms(detection[:, :4], detection[:, 4], nms_thres)
+    return detection[keep].cpu().numpy()
