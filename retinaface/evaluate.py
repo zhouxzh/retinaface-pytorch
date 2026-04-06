@@ -38,8 +38,6 @@ def infer_backbone_from_weights(weights_path):
         if normalized.endswith(suffix):
             normalized = normalized[:-len(suffix)]
             break
-    if normalized == 'mobilenet0.25':
-        return 'mobilenet'
     return normalized
 
 

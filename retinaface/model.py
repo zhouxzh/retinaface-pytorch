@@ -2,9 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import timm
-import torchvision.models._utils as _utils
 
-from retinaface.blocks import FPN, MobileNetV1, SSH
+from retinaface.blocks import FPN, SSH
 
 
 class ClassHead(nn.Module):
@@ -43,24 +42,15 @@ class LandmarkHead(nn.Module):
 class RetinaFace(nn.Module):
     def __init__(self, cfg=None, pretrained=False, mode='train'):
         super().__init__()
-        if cfg['backbone_source'] == 'custom':
-            backbone = MobileNetV1()
-            if pretrained:
-                checkpoint = torch.load(cfg['pretrained_path'], map_location=torch.device('cpu'))
-                new_state_dict = {}
-                for key, value in checkpoint['state_dict'].items():
-                    new_state_dict[key[7:]] = value
-                backbone.load_state_dict(new_state_dict)
-            self.body = _utils.IntermediateLayerGetter(backbone, cfg['return_layers'])
-        elif cfg['backbone_source'] == 'timm':
-            self.body = timm.create_model(
-                cfg['name'],
-                pretrained=pretrained,
-                features_only=True,
-                out_indices=cfg['out_indices'],
-            )
-        else:
+        if cfg['backbone_source'] != 'timm':
             raise ValueError(f"Unsupported backbone config: {cfg['name']}")
+
+        self.body = timm.create_model(
+            cfg['name'],
+            pretrained=pretrained,
+            features_only=True,
+            out_indices=cfg['out_indices'],
+        )
 
         self.fpn = FPN(cfg['in_channels_list'], cfg['out_channel'])
         self.ssh1 = SSH(cfg['out_channel'], cfg['out_channel'])

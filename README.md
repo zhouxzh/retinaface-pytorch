@@ -126,8 +126,8 @@ conda run -n retinaface python main.py fps --test_interval 100
 2. 在 retinaface/inference.py 文件里面，修改 model_path 和 backbone 使其对应训练好的文件。
 ```python
 _defaults = {
-    "model_path"        : 'weights/Retinaface_mobilenet0.25.pth',
-    "backbone"          : 'mobilenet',
+    "model_path"        : 'weights/retinaface_mobilenetv2_050.pth',
+    "backbone"          : 'mobilenetv2_050',
     "confidence"        : 0.5,
     "nms_iou"           : 0.45,
     "cuda"              : True,
@@ -146,17 +146,17 @@ _defaults = {
 
 **从预训练权重开始训练（推荐）：**
 ```bash
-conda run -n retinaface python main.py train --backbone mobilenet --batch_size 32 --epochs 100 --pretrained
+conda run -n retinaface python main.py train --backbone mobilenetv2_050 --batch_size 32 --epochs 100 --pretrained
 ```
 
 **自动从上一次训练中断处继续训练：**
 ```bash
-conda run -n retinaface python main.py train --backbone mobilenet --batch_size 32 --epochs 100 --restart
+conda run -n retinaface python main.py train --backbone mobilenetv2_050 --batch_size 32 --epochs 100 --restart
 ```
 
 **显式指定 Hugging Face 数据集仓库训练：**
 ```bash
-conda run -n retinaface python main.py train --repo_id zhouxzh/retinaface_widerface --download_root data --backbone mobilenet --batch_size 32 --pretrained
+conda run -n retinaface python main.py train --repo_id zhouxzh/retinaface_widerface --download_root data --backbone mobilenetv2_050 --batch_size 32 --pretrained
 ```
 
 **批量训练 README 中推荐骨干：**
@@ -165,7 +165,7 @@ bash run.sh
 ```
 
 **训练参数说明：**
-- `--backbone`: 主干网络，可选自定义 mobilenet，或 timm 中以 mobilenet / resnet 开头的骨干
+- `--backbone`: 主干网络，支持 timm 中以 mobilenet / resnet 开头的骨干
 - `--batch_size`: 批次大小，默认 32，按 32G 显存单卡做了上调
 - `--epochs`: 训练轮数
 - `--lr`: 学习率，默认 4e-3，和更大的默认 batch size 一起调整
@@ -182,7 +182,7 @@ bash run.sh
 
 默认训练配置说明：
 - 当前默认值更偏向 32G 显存单卡环境，例如 RTX 5090D 这类卡。
-- 默认训练主干仍然是 mobilenet，输入尺寸仍然是 840x840，没有修改数据尺度。
+- 默认训练主干为 mobilenetv2_050，输入尺寸仍然是 840x840，没有修改数据尺度。
 - 默认数据入口已经切换为 Hugging Face 远程数据集下载 + parquet 训练流，不再兼容本地 parquet 目录探测。
 - 训练阶段只使用 train split，并只记录 train loss；val split 留给 evaluate 计算 mAP。
 - 训练开始前会先通过 Hugging Face 默认缓存下载数据，再把需要的 parquet 文件同步到 data/仓库名 目录。
@@ -200,7 +200,7 @@ bash run.sh
 1. 评估阶段会直接从 Hugging Face 数据集仓库拉取 val/validation split，不再依赖百度云验证集压缩包。
 2. 使用统一的 main.py 入口进行评估：
 ```bash
-conda run -n retinaface python main.py evaluate --backbone mobilenet --weights weights/Retinaface_mobilenet0.25.pth
+conda run -n retinaface python main.py evaluate --backbone mobilenetv2_050 --weights weights/retinaface_mobilenetv2_050.pth
 ```
 
 **默认批量评估 weights 下全部权重：**
@@ -209,7 +209,7 @@ conda run -n retinaface python main.py evaluate
 ```
 
 **评估参数说明：**
-- `--backbone`: 主干网络，可选自定义 mobilenet，或 timm 中以 mobilenet / resnet 开头的骨干
+- `--backbone`: 主干网络，支持 timm 中以 mobilenet / resnet 开头的骨干
 - `--weights`: 权重文件路径
 - `--repo_id`: Hugging Face 数据集仓库名，例如 zhouxzh/retinaface_widerface
 - `--download_root`: 远程数据集下载到本地的根目录，默认 data
@@ -225,16 +225,13 @@ conda run -n retinaface python main.py evaluate
 - 日志中会记录 backbone、backbone_source、通道配置、输入配置、图片数量以及 Easy/Medium/Hard AP。
 
 ## 主干推荐
-当前代码已经支持两类主干：
-
-- 仓库内置的自定义 mobilenet0.25。
-- timm 中所有以 mobilenet 或 resnet 开头，且可以通过 features_only 接出至少 3 层特征的模型。
+当前代码支持 timm 中所有以 mobilenet 或 resnet 开头，且可以通过 features_only 接出至少 3 层特征的模型。
 
 结合当前 RetinaFace 结构、FPN 接法和常见显存预算，建议优先这样选：
 
 | 场景 | 推荐型号 | 原因 |
 | :--- | :--- | :--- |
-| 入门 / 低显存训练 | mobilenet、mobilenetv2_035、mobilenetv2_050、mobilenetv3_small_050 | 参数量和通道数较小，适合先跑通训练流程 |
+| 入门 / 低显存训练 | mobilenetv2_035、mobilenetv2_050、mobilenetv3_small_050 | 参数量和通道数较小，适合先跑通训练流程 |
 | 速度优先推理 | mobilenetv2_050、mobilenetv2_100、mobilenetv3_small_100、resnet18 | FPN 输入通道适中，推理开销更可控 |
 | 精度与速度平衡 | mobilenetv2_100、mobilenetv3_large_100、mobilenetv4_conv_small、resnet34、resnet50 | 通道规模适中，通常比超轻量模型更稳定 |
 | 精度优先 | resnet50、resnet101、resnetv2_50、mobilenetv5_base | 深层语义更强，但训练和推理成本更高 |
@@ -242,17 +239,14 @@ conda run -n retinaface python main.py evaluate
 
 补充建议：
 
-- 如果你只是想复现实验结果，优先使用仓库内置 mobilenet 或 resnet50。
+- 如果你只是想复现实验结果，优先使用 mobilenetv2_050 或 resnet50。
 - 如果你只有 8GB 左右显存，优先从 mobilenetv2_050、mobilenetv2_100、mobilenetv3_small_100、resnet18 开始。
-- 如果你要在 timm 主干上继续训练，最好重新训练整套 RetinaFace 权重，不要混用仓库原始 mobilenet0.25 权重。
+- 如果你切换 backbone，最好重新训练整套 RetinaFace 权重，不要混用不同主干的权重。
 
 ## 主干清单
 下面清单基于当前环境中的 timm 1.0.26 实测列出。格式为：
 
 模型名 -> RetinaFace 当前接入 FPN 的最后三层通道
-
-### 自定义主干
-- mobilenet -> [64, 128, 256]，这是仓库内置的 MobileNetV1 0.25，不属于 timm。
 
 ### timm mobilenet 家族（37 个）
 - mobilenet_edgetpu_100 -> [48, 96, 192]
@@ -383,14 +377,14 @@ conda run -n retinaface python main.py evaluate
 
 ### 兼容性结论
 - 结构兼容：当前 timm 中以 mobilenet 或 resnet 开头的 112 个模型，全部可以通过本项目的 features_only + FPN 接法。
-- 名称兼容：当前代码只接受自定义 mobilenet，以及 timm 中以 mobilenet / resnet 开头的主干，其他家族不会被识别。
-- 权重兼容：仓库自带的 mobilenet0.25 权重只能用于内置 mobilenet，不能直接加载到 timm 的 mobilenetv2、mobilenetv3、mobilenetv4、mobilenetv5 上。
+- 名称兼容：当前代码只接受 timm 中以 mobilenet / resnet 开头的主干，其他家族不会被识别。
+- 权重兼容：权重必须和对应 backbone 一一匹配，不能跨不同主干混用。
 - 权重文件兼容：如果你传入的是 timm 主干名称，但没有对应训练好的 RetinaFace 权重文件，加载阶段会失败。
 - 训练 / 推理尺寸兼容：网络本身是全卷积的，所以 840x840 训练、1280x1280 推理在形状上是兼容的；但这属于分布不一致，速度、显存占用和精度表现可能会变化。
 - 大通道主干兼容：像 resnet50x64_clip、resnetv2_152x4_bit 这类大通道骨干虽然结构上能接入，但显存占用、训练速度和收敛成本会明显更高。
 
 ### 实际选型建议
-- 想先跑通项目：选 mobilenet 或 resnet50。
+- 想先跑通项目：选 mobilenetv2_050 或 resnet50。
 - 想兼顾速度和效果：优先试 mobilenetv2_100、mobilenetv3_large_100、resnet18、resnet34。
 - 想做更强 backbone 的实验：优先试 resnet50、resnet101、resnetv2_50，不建议一开始就上极大通道模型。
 - 如果准备写论文或做系统性对比，建议固定训练尺寸和推理尺寸各做一组对照，不要只换 backbone。

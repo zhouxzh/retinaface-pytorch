@@ -7,7 +7,7 @@ RetinaFace 统一入口脚本
   python main.py predict --input examples/ --output outputs/
 
   # 训练
-    python main.py train --backbone mobilenet --batch_size 32
+        python main.py train --backbone mobilenetv2_050 --batch_size 32
 
   # 评估
   python main.py evaluate
@@ -100,7 +100,7 @@ def main():
     predict_parser = subparsers.add_parser('predict', help='批量图片检测')
     predict_parser.add_argument('--input', type=str, default='examples/', help='输入图片文件夹')
     predict_parser.add_argument('--output', type=str, default='outputs/', help='输出结果文件夹')
-    predict_parser.add_argument('--backbone', type=str, default='mobilenet', help='主干网络名称，支持自定义 mobilenet 以及 timm 的 resnet/mobilenet 家族')
+    predict_parser.add_argument('--backbone', type=str, default='mobilenetv2_050', help='主干网络名称，支持 timm 的 resnet/mobilenet 家族')
     predict_parser.add_argument('--weights', type=str, default='', help='权重文件路径，为空时按 backbone 推导默认值')
 
     # ========== 视频模式 ==========
@@ -108,19 +108,19 @@ def main():
     video_parser.add_argument('--input', type=str, default='0', help='视频路径或0表示摄像头')
     video_parser.add_argument('--output', type=str, default='', help='保存视频路径（可选）')
     video_parser.add_argument('--fps', type=float, default=25.0, help='输出视频帧率')
-    video_parser.add_argument('--backbone', type=str, default='mobilenet', help='主干网络名称，支持自定义 mobilenet 以及 timm 的 resnet/mobilenet 家族')
+    video_parser.add_argument('--backbone', type=str, default='mobilenetv2_050', help='主干网络名称，支持 timm 的 resnet/mobilenet 家族')
     video_parser.add_argument('--weights', type=str, default='', help='权重文件路径，为空时按 backbone 推导默认值')
 
     # ========== FPS测试 ==========
     fps_parser = subparsers.add_parser('fps', help='测试模型推理速度')
     fps_parser.add_argument('--test_interval', type=int, default=100, help='测试次数')
     fps_parser.add_argument('--image', type=str, default='examples/street.jpg', help='测试图片')
-    fps_parser.add_argument('--backbone', type=str, default='mobilenet', help='主干网络名称，支持自定义 mobilenet 以及 timm 的 resnet/mobilenet 家族')
+    fps_parser.add_argument('--backbone', type=str, default='mobilenetv2_050', help='主干网络名称，支持 timm 的 resnet/mobilenet 家族')
     fps_parser.add_argument('--weights', type=str, default='', help='权重文件路径，为空时按 backbone 推导默认值')
 
     # ========== 训练模式 ==========
     train_parser = subparsers.add_parser('train', help='训练模型')
-    train_parser.add_argument('--backbone', type=str, default='mobilenet', help='主干网络名称，支持自定义 mobilenet 以及 timm 的 resnet/mobilenet 家族')
+    train_parser.add_argument('--backbone', type=str, default='mobilenetv2_050', help='主干网络名称，支持 timm 的 resnet/mobilenet 家族')
     train_parser.add_argument('--batch_size', type=int, default=DEFAULT_TRAIN_BATCH_SIZE, help='批次大小，默认按 32G 显存单卡调到 32')
     train_parser.add_argument('--epochs', type=int, default=100, help='训练轮数')
     train_parser.add_argument('--lr', type=float, default=DEFAULT_TRAIN_LR, help='学习率，默认随更大的 batch size 调到 4e-3')
@@ -138,7 +138,7 @@ def main():
 
     # ========== ONNX导出模式 ==========
     onnx_parser = subparsers.add_parser('export_onnx', help='将 weights 中的 pth 权重转换为 ONNX')
-    onnx_parser.add_argument('--backbone', type=str, default='mobilenet', help='主干网络名称，必须与 pth 对应')
+    onnx_parser.add_argument('--backbone', type=str, default='mobilenetv2_050', help='主干网络名称，必须与 pth 对应')
     onnx_parser.add_argument('--weights', type=str, default='', help='指定单个 pth 文件路径；为空时扫描 weights_dir 下所有 pth')
     onnx_parser.add_argument('--weights_dir', type=str, default='weights', help='批量转换时扫描的权重目录')
     onnx_parser.add_argument('--output', type=str, default='', help='单个权重导出时的 ONNX 输出路径')

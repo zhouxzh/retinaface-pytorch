@@ -31,7 +31,7 @@ def letterbox_image(image, size):
 class Retinaface:
     _defaults = {
         'model_path': '',
-        'backbone': 'mobilenet',
+        'backbone': 'mobilenetv2_050',
         'confidence': 0.5,
         'nms_iou': 0.45,
         'input_shape': [1280, 1280, 3],
